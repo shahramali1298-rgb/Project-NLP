@@ -1,53 +1,111 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
-st.set_page_config(page_title="AI Weather Dashboard", layout="centered")
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(
+    page_title="AI Weather Dashboard",
+    page_icon="🌦️",
+    layout="wide"
+)
 
-st.title("🌦️ AI Weather Forecast Dashboard")
-st.write("ML-based Weather Prediction System (Streamlit Safe Version)")
+# ---------------- CUSTOM STYLE ----------------
+st.markdown("""
+    <style>
+    .main {background-color: #0f172a;}
+    h1 {color: #38bdf8;}
+    .stMetric {background-color: #1e293b; padding: 10px; border-radius: 10px;}
+    </style>
+""", unsafe_allow_html=True)
 
-city = st.text_input("Enter City Name")
+# ---------------- HEADER ----------------
+st.title("🌦️ AI Weather Intelligence Dashboard")
+st.write("Smart AI-based Weather Simulation System (Streamlit Edition)")
 
-# ---------------- SAFE AI MODEL (NO SKLEARN DEPENDENCY ISSUE) ----------------
-def predict_weather(city):
-    np.random.seed(len(city))
+# ---------------- SIDEBAR ----------------
+st.sidebar.header("⚙️ Controls")
 
-    temp = np.random.randint(15, 45)
-    humidity = np.random.randint(20, 90)
-    wind = np.random.randint(5, 40)
+city = st.sidebar.text_input("Enter City Name", "Islamabad")
+unit = st.sidebar.selectbox("Temperature Unit", ["Celsius", "Fahrenheit"])
 
-    condition = np.random.choice(["Sunny ☀️", "Cloudy ☁️", "Rainy 🌧️", "Stormy ⛈️"])
+show_history = st.sidebar.checkbox("Show Weather History", True)
+
+# ---------------- SESSION HISTORY ----------------
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+# ---------------- WEATHER ENGINE ----------------
+def weather_engine(city):
+    np.random.seed(len(city) + int(datetime.now().second))
+
+    temp = np.random.randint(10, 45)
+    humidity = np.random.randint(20, 95)
+    wind = np.random.randint(5, 50)
+
+    condition = np.random.choice([
+        "Sunny ☀️", 
+        "Cloudy ☁️", 
+        "Rainy 🌧️", 
+        "Stormy ⛈️", 
+        "Windy 🌬️"
+    ])
 
     return temp, humidity, wind, condition
 
+# ---------------- MAIN BUTTON ----------------
+if st.sidebar.button("🚀 Generate Weather"):
 
-if st.button("Predict Weather"):
+    temp, humidity, wind, condition = weather_engine(city)
 
-    if not city:
-        st.warning("Please enter city name")
+    if unit == "Fahrenheit":
+        temp = (temp * 9/5) + 32
+
+    # save history
+    st.session_state.history.append([city, temp, humidity, wind, condition])
+
+    # ---------------- TOP METRICS ----------------
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric("🌡️ Temperature", f"{round(temp,1)}°")
+    col2.metric("💧 Humidity", f"{humidity}%")
+    col3.metric("🌬️ Wind Speed", f"{wind} km/h")
+    col4.metric("📍 Condition", condition)
+
+    # ---------------- ALERT SYSTEM ----------------
+    st.subheader("⚡ AI Weather Insight")
+
+    if temp > 35:
+        st.error("🔥 Extreme Heat Alert!")
+    elif temp < 15:
+        st.info("❄️ Cold Weather Alert!")
+    elif "Rainy" in condition:
+        st.warning("☔ Rain Expected – carry umbrella!")
     else:
-        temp, humidity, wind, condition = predict_weather(city)
+        st.success("😊 Normal Weather Conditions")
 
-        st.subheader(f"📍 Weather Report: {city}")
+    # ---------------- CHART ----------------
+    st.subheader("📊 Weather Analysis Chart")
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Temperature 🌡️", f"{temp} °C")
-        col2.metric("Humidity 💧", f"{humidity}%")
-        col3.metric("Wind 🌬️", f"{wind} km/h")
+    df = pd.DataFrame({
+        "Parameters": ["Temperature", "Humidity", "Wind"],
+        "Values": [temp, humidity, wind]
+    })
 
-        st.success(f"Condition: {condition}")
+    st.bar_chart(df.set_index("Parameters"))
 
-        df = pd.DataFrame({
-            "Parameter": ["Temp", "Humidity", "Wind"],
-            "Value": [temp, humidity, wind]
-        })
+# ---------------- HISTORY SECTION ----------------
+if show_history and len(st.session_state.history) > 0:
 
-        st.bar_chart(df.set_index("Parameter"))
+    st.subheader("📜 Weather History")
 
-        if temp > 35:
-            st.warning("🔥 Hot Weather Alert")
-        elif temp < 20:
-            st.info("❄️ Cold Weather Alert")
-        else:
-            st.success("😊 Normal Weather")
+    hist_df = pd.DataFrame(
+        st.session_state.history,
+        columns=["City", "Temp", "Humidity", "Wind", "Condition"]
+    )
+
+    st.dataframe(hist_df, use_container_width=True)
+
+# ---------------- FOOTER ----------------
+st.markdown("---")
+st.caption("🚀 Built with Streamlit | AI Weather Simulation Dashboard")
